@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
+import 'package:background_locator_2/background_locator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity/connectivity.dart';
 import 'package:device_info_plus/device_info_plus.dart';
@@ -23,13 +24,18 @@ import 'package:firebase_core/firebase_core.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   AndroidAlarmManager.initialize();
-  FlutterBackground.initialize(androidConfig: androidConfig);
-  FlutterBackground.enableBackgroundExecution();
+  // Initialize the FlutterBackground plugin
+  await FlutterBackground.initialize();
+
+  // Enable background execution
+  await FlutterBackground.enableBackgroundExecution();
   //await initializeService();
   await initializeServiceLocation();
 
   // Ensure Firebase is initialized before running the app
   await Firebase.initializeApp();
+
+  await BackgroundLocator.initialize();
 
   runApp(
     const MaterialApp(
@@ -38,7 +44,6 @@ Future<void> main() async {
     ),
   );
 }
-
 
 Future<void> initializeServiceLocation() async {
   final service = FlutterBackgroundService();
@@ -85,10 +90,12 @@ Future<void> initializeServiceLocation() async {
   );
 }
 
+
+
 @pragma('vm:entry-point')
 void onStart(ServiceInstance service) async {
   DartPluginRegistrant.ensureInitialized();
-
+  LocationService ls = LocationService();
   SharedPreferences preferences = await SharedPreferences.getInstance();
   await preferences.setString("hello", "world");
 
@@ -102,20 +109,21 @@ void onStart(ServiceInstance service) async {
 
     service.on('setAsBackground').listen((event) {
       service.setAsBackgroundService();
+      //listenLocation();
     });
   }
 
   service.on('stopService').listen((event) async {
     service.stopSelf();
-    deleteDocument();
-    //EndAllServicesLocation();
-    stopListeningLocation();
+    ls.deleteDocument();
+    //stopListeningLocation();
+    ls.stopListening();
     FlutterLocalNotificationsPlugin().cancelAll();
   });
 
   if(isClockedIn == false){
     startTimer();
-    listenLocation();
+    ls.listenLocation();
   }
 
 
@@ -136,19 +144,19 @@ void onStart(ServiceInstance service) async {
           ),
         );
 
-        flutterLocalNotificationsPlugin.show(
-          889,
-          'Location',
-          'Longitude ${long} , Latitute $lat',
-          const NotificationDetails(
-            android: AndroidNotificationDetails(
-              'my_foreground',
-              'MY FOREGROUND SERVICE',
-              icon: 'ic_bg_service_small',
-              ongoing: true,
-            ),
-          ),
-        );
+        // flutterLocalNotificationsPlugin.show(
+        //   889,
+        //   'Location',
+        //   'Longitude ${longi} , Latitute $lat',
+        //   const NotificationDetails(
+        //     android: AndroidNotificationDetails(
+        //       'my_foreground',
+        //       'MY FOREGROUND SERVICE',
+        //       icon: 'ic_bg_service_small',
+        //       ongoing: true,
+        //     ),
+        //   ),
+        // );
 
         service.setForegroundNotificationInfo(
           title: "My App Service",

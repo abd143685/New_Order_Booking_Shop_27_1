@@ -73,6 +73,7 @@ flutter {
 //apply plugin:
 dependencies {
     implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+    implementation(platform("com.google.android.gms:play-services-location:18.0.0"))
     //implementation 'com.transistorsoft:tsbackgroundfetch:3.1.2' // Use the latest version available
 }
    // implementation(platform("com.google.firebase:firebase-bom:32.7.0"))

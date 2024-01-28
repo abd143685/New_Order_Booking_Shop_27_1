@@ -186,6 +186,12 @@ class _HomePageState extends State<HomePage>with WidgetsBindingObserver {
       return completer.future;
     }
 
+    LocationPermission permission = await Geolocator.checkPermission();
+    if(permission == false){
+      permission = await Geolocator.requestPermission();
+      completer.complete();
+    }
+
     var id = await customAlphabet('1234567890', 10);
     await _getCurrentLocation();
 
@@ -223,9 +229,6 @@ class _HomePageState extends State<HomePage>with WidgetsBindingObserver {
         isClockedIn = false;
         _saveClockStatus(false);
         _stopTimer();
-        setState(() async {
-          _clockRefresh();
-        });
       }
     });
     await Future.delayed(Duration(seconds: 3));
@@ -871,7 +874,7 @@ class _HomePageState extends State<HomePage>with WidgetsBindingObserver {
         var result = String.fromCharCodes(responseData);
         print("Results: Post Successfully");
         //deleteGPXFile(); // Delete the GPX file after successful upload
-        deleteDocument();
+        //deleteDocument();
       } else {
         print("Failed to upload file. Status code: ${response.statusCode}");
       }
