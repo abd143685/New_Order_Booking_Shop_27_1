@@ -378,12 +378,16 @@ class LocationService {
   }
 
   Future<void> stopListening() async {
-    WakelockPlus.disable();
-    isConnected = await isInternetConnected();
-    LocationManager().stop();
-    locationSubscription.cancel();
-    if(isConnected){
-      deleteDocument();
+    try{
+      WakelockPlus.disable();
+      isConnected = await isInternetConnected();
+      LocationManager().stop();
+      locationSubscription.cancel();
+      if(isConnected){
+        deleteDocument();
+      }
+    } catch (e){
+      print("ERROR ${e.toString()}");
     }
   }
 }
