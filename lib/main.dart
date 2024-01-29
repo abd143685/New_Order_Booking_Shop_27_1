@@ -85,12 +85,9 @@ Future<void> initializeServiceLocation() async {
     iosConfiguration: IosConfiguration(
       autoStart: true,
       onForeground: onStart,
-      onBackground: onIosBackground,
     ),
   );
 }
-
-
 
 @pragma('vm:entry-point')
 void onStart(ServiceInstance service) async {
@@ -109,13 +106,12 @@ void onStart(ServiceInstance service) async {
 
     service.on('setAsBackground').listen((event) {
       service.setAsBackgroundService();
-      //listenLocation();
+      ls.listenLocation();
     });
   }
 
   service.on('stopService').listen((event) async {
     service.stopSelf();
-    ls.deleteDocument();
     //stopListeningLocation();
     ls.stopListening();
     FlutterLocalNotificationsPlugin().cancelAll();
@@ -191,15 +187,15 @@ void onStart(ServiceInstance service) async {
 }
 
 //Flutter Background
-
-final androidConfig = FlutterBackgroundAndroidConfig(
-  notificationTitle: "Background Tracking",
-  notificationText: "Background Notification",
-  notificationImportance: AndroidNotificationImportance.Default,
-  notificationIcon: AndroidResource(
-      name: 'background_icon',
-      defType: 'drawable'), // Default is ic_launcher from folder mipmap
-);
+//
+// final androidConfig = FlutterBackgroundAndroidConfig(
+//   notificationTitle: "Background Tracking",
+//   notificationText: "Background Notification",
+//   notificationImportance: AndroidNotificationImportance.Default,
+//   notificationIcon: AndroidResource(
+//       name: 'background_icon',
+//       defType: 'drawable'), // Default is ic_launcher from folder mipmap
+// );
 
 
 
@@ -262,19 +258,19 @@ final androidConfig = FlutterBackgroundAndroidConfig(
 // to ensure this is executed
 // run app from xcode, then from xcode menu, select Simulate Background Fetch
 
-@pragma('vm:entry-point')
-Future<bool> onIosBackground(ServiceInstance service) async {
-  WidgetsFlutterBinding.ensureInitialized();
-  DartPluginRegistrant.ensureInitialized();
-
-  SharedPreferences preferences = await SharedPreferences.getInstance();
-  await preferences.reload();
-  final log = preferences.getStringList('log') ?? <String>[];
-  log.add(DateTime.now().toIso8601String());
-  await preferences.setStringList('log', log);
-
-  return true;
-}
+// @pragma('vm:entry-point')
+// Future<bool> onIosBackground(ServiceInstance service) async {
+//   WidgetsFlutterBinding.ensureInitialized();
+//   DartPluginRegistrant.ensureInitialized();
+//
+//   SharedPreferences preferences = await SharedPreferences.getInstance();
+//   await preferences.reload();
+//   final log = preferences.getStringList('log') ?? <String>[];
+//   log.add(DateTime.now().toIso8601String());
+//   await preferences.setStringList('log', log);
+//
+//   return true;
+// }
 
 // @pragma('vm:entry-point')
 // void onStart(ServiceInstance service) async {

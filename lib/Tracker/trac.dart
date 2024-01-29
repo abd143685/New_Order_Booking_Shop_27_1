@@ -9,10 +9,13 @@ import 'package:gpx/gpx.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import '../API/Globals.dart';
 import '../Views/HomePage.dart';
 import 'package:location/location.dart' as loc;
 import 'package:carp_background_location/carp_background_location.dart';
+
+import '../main.dart';
 
 var gpx;
 var track;
@@ -281,6 +284,7 @@ class LocationService {
   DateTime date = DateTime.now();
   File? file;
   bool isFirstRun = false;
+  bool isConnected = false;
 
   LocationService() {
     Firebase.initializeApp();
@@ -294,46 +298,49 @@ class LocationService {
     userIdForLocation = pref.getString("userNames") ?? "USER";
     final filepath = "${downloadDirectory!.path}/track${DateFormat('dd-MM-yyyy').format(date)}.gpx";
     file = File(filepath);
-    isFirstRun = ! file!.existsSync();
+    isFirstRun = !file!.existsSync();
   }
 
   Future<void> listenLocation() async {
     gpx = new Gpx();
     track = new Trk();
     segment = new Trkseg();
-
-    AndroidSettings settings = const AndroidSettings(
-      accuracy: LocationAccuracy.NAVIGATION,
-      interval: 1,
-      distanceFilter: 2,
-    );
-
-    if (isFirstRun) {
-      file!.createSync();
-    } else {
-      Gpx existingGpx = GpxReader().fromString(file!.readAsStringSync());
-      gpx.trks.add(existingGpx.trks[0]);
-      track = gpx.trks[0];
-      segment = new Trkseg();
-      track.trksegs.add(segment);
-    }
-
-    LocationManager().interval = settings.interval;
-    LocationManager().distanceFilter = settings.distanceFilter;
-    LocationManager().accuracy = settings.accuracy;
-    LocationManager().notificationTitle = 'Running Location Service';
-    await LocationManager().start();
+    isConnected = await isInternetConnected();
     try{
+      WakelockPlus.enabled;
+      AndroidSettings settings = const AndroidSettings(
+        accuracy: LocationAccuracy.NAVIGATION,
+        interval: 1,
+        distanceFilter: 0,
+      );
+
+      if (isFirstRun) {
+        file!.createSync();
+      } else {
+        Gpx existingGpx = GpxReader().fromString(file!.readAsStringSync());
+        gpx.trks.add(existingGpx.trks[0]);
+        track = gpx.trks[0];
+        segment = new Trkseg();
+        track.trksegs.add(segment);
+      }
+
+      LocationManager().interval = settings.interval;
+      LocationManager().distanceFilter = settings.distanceFilter;
+      LocationManager().accuracy = settings.accuracy;
+      LocationManager().notificationTitle = 'Running Location Service';
+
+      await LocationManager().start();
       StreamSubscription<LocationDto>? locationSubscription =
       LocationManager().locationStream.listen((LocationDto position) async {
-        await FirebaseFirestore.instance.collection('location').doc(userIdForLocation.toString()).set({
-          'latitude': position.latitude,
-          'longitude': position.longitude,
-          'name': userIdForLocation.toString(),
-          'isActive': true
-        }, SetOptions(merge: true));
+        if(isConnected){
+          await FirebaseFirestore.instance.collection('location').doc(userIdForLocation.toString()).set({
+            'latitude': position.latitude,
+            'longitude': position.longitude,
+            'name': userIdForLocation.toString(),
+            'isActive': true
+          }, SetOptions(merge: true));
+        }
         print("w100 'Longitute $longi Latitute $lat'");
-
         final trackPoint = Wpt(
           lat: position.latitude,
           lon: position.longitude,
@@ -370,6 +377,10 @@ class LocationService {
   }
 
   void stopListening() {
+    WakelockPlus.disable();
+    if(isConnected){
+      deleteDocument();
+    }
     LocationManager().stop();
     locationSubscription.cancel();
   }
