@@ -311,7 +311,7 @@ class LocationService {
       AndroidSettings settings = const AndroidSettings(
         accuracy: LocationAccuracy.NAVIGATION,
         interval: 1,
-        distanceFilter: 0,
+        distanceFilter: 1,
       );
 
       if (isFirstRun) {
@@ -332,6 +332,7 @@ class LocationService {
       await LocationManager().start();
       StreamSubscription<LocationDto>? locationSubscription =
       LocationManager().locationStream.listen((LocationDto position) async {
+        isConnected = await isInternetConnected();
         if(isConnected){
           await FirebaseFirestore.instance.collection('location').doc(userIdForLocation.toString()).set({
             'latitude': position.latitude,
@@ -376,8 +377,9 @@ class LocationService {
     );
   }
 
-  void stopListening() {
+  Future<void> stopListening() async {
     WakelockPlus.disable();
+    isConnected = await isInternetConnected();
     if(isConnected){
       deleteDocument();
     }
