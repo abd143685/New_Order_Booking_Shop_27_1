@@ -111,9 +111,10 @@ void onStart(ServiceInstance service) async {
   }
 
   service.on('stopService').listen((event) async {
+    ls.stopListening();
+    ls.deleteDocument();
     service.stopSelf();
     //stopListeningLocation();
-    ls.stopListening();
     FlutterLocalNotificationsPlugin().cancelAll();
   });
 

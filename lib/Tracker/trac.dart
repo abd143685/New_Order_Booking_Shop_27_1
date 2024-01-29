@@ -330,7 +330,7 @@ class LocationService {
       LocationManager().notificationTitle = 'Running Location Service';
 
       await LocationManager().start();
-      StreamSubscription<LocationDto>? locationSubscription =
+      locationSubscription =
       LocationManager().locationStream.listen((LocationDto position) async {
         isConnected = await isInternetConnected();
         if(isConnected){
@@ -367,27 +367,23 @@ class LocationService {
 
 
   deleteDocument() async {
-    await FirebaseFirestore.instance
-        .collection('location')
-        .doc(userIdForLocation)
-        .delete()
-        .then(
-          (doc) => print("Document deleted"),
-      onError: (e) => print("Error updating document $e"),
-    );
+      await FirebaseFirestore.instance
+          .collection('location')
+          .doc(userIdForLocation)
+          .delete()
+          .then(
+            (doc) => print("Document deleted"),
+        onError: (e) => print("Error updating document $e"),
+      );
   }
 
   Future<void> stopListening() async {
-    try{
-      WakelockPlus.disable();
-      isConnected = await isInternetConnected();
-      LocationManager().stop();
-      locationSubscription.cancel();
-      if(isConnected){
-        deleteDocument();
+      try{
+        WakelockPlus.disable();
+        LocationManager().stop();
+        locationSubscription.cancel();
+      }catch (e){
+        print("ERROR ${e.toString()}");
       }
-    } catch (e){
-      print("ERROR ${e.toString()}");
-    }
   }
 }
