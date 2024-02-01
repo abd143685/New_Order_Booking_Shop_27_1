@@ -9,7 +9,6 @@ import 'package:gpx/gpx.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:wakelock_plus/wakelock_plus.dart';
 import '../API/Globals.dart';
 import '../Views/HomePage.dart';
 import 'package:location/location.dart' as loc;
@@ -307,7 +306,7 @@ class LocationService {
     segment = new Trkseg();
     isConnected = await isInternetConnected();
     try{
-      WakelockPlus.enabled;
+      //WakelockPlus.enabled;
       AndroidSettings settings = const AndroidSettings(
         accuracy: LocationAccuracy.NAVIGATION,
         interval: 1,
@@ -379,7 +378,7 @@ class LocationService {
 
   Future<void> stopListening() async {
       try{
-        WakelockPlus.disable();
+        //WakelockPlus.disable();
         LocationManager().stop();
         locationSubscription.cancel();
       }catch (e){

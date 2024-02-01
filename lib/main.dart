@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 import 'package:background_locator_2/background_locator.dart';
+import 'package:background_locator_2/callback_dispatcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity/connectivity.dart';
 import 'package:device_info_plus/device_info_plus.dart';
@@ -15,6 +16,7 @@ import 'package:geolocator/geolocator.dart' as gp;
 import 'package:get/get.dart';
 import 'package:order_booking_shop/Tracker/trac.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:workmanager/workmanager.dart';
 import 'API/Globals.dart';
 import 'Databases/DBHelper.dart';
 import 'Views/splash_screen.dart';
@@ -24,12 +26,14 @@ import 'package:firebase_core/firebase_core.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   AndroidAlarmManager.initialize();
+
   // Initialize the FlutterBackground plugin
   await FlutterBackground.initialize();
 
   // Enable background execution
   await FlutterBackground.enableBackgroundExecution();
-  //await initializeService();
+
+  // Initialize the service
   await initializeServiceLocation();
 
   // Ensure Firebase is initialized before running the app
@@ -37,12 +41,22 @@ Future<void> main() async {
 
   await BackgroundLocator.initialize();
 
+  Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
+  Workmanager().registerPeriodicTask("1", "simpleTask", frequency: Duration(minutes: 15));
+
   runApp(
     const MaterialApp(
       debugShowCheckedModeBanner: false,
       home: const SplashScreen(),
     ),
   );
+}
+
+void callbackDispatcher(){
+  Workmanager().executeTask((task, inputData) async {
+    print("WorkManager MMM ");
+    return Future.value(true);
+  });
 }
 
 Future<void> initializeServiceLocation() async {
@@ -92,13 +106,12 @@ Future<void> initializeServiceLocation() async {
 @pragma('vm:entry-point')
 void onStart(ServiceInstance service) async {
   DartPluginRegistrant.ensureInitialized();
-  LocationService ls = LocationService();
   SharedPreferences preferences = await SharedPreferences.getInstance();
   await preferences.setString("hello", "world");
 
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
   FlutterLocalNotificationsPlugin();
-
+  LocationService ls = LocationService();
   if (service is AndroidServiceInstance) {
     service.on('setAsForeground').listen((event) {
       service.setAsForegroundService();
@@ -122,7 +135,6 @@ void onStart(ServiceInstance service) async {
     startTimer();
     ls.listenLocation();
   }
-
 
   Timer.periodic(const Duration(seconds: 1), (timer) async {
     if (service is AndroidServiceInstance) {
