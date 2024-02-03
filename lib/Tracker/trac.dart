@@ -349,7 +349,7 @@ class LocationService {
       AndroidSettings settings = const AndroidSettings(
         accuracy: LocationAccuracy.NAVIGATION,
         interval: 1,
-        distanceFilter: 0,
+        distanceFilter: 2,
       );
 
       if (isFirstRun) {
