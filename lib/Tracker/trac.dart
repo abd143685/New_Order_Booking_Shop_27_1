@@ -8,6 +8,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:gpx/gpx.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../API/Globals.dart';
 import '../Views/HomePage.dart';
@@ -291,6 +292,43 @@ class LocationService {
 
   }
 
+  Future<void> requestPermissions() async {
+    // Check location permission
+    PermissionStatus locationStatus = await Permission.location.status;
+
+    if (!locationStatus.isGranted) {
+      PermissionStatus newLocationStatus = await Permission.location.request();
+
+      if (newLocationStatus.isGranted) {
+        print('Location permission granted');
+      } else if (newLocationStatus.isDenied) {
+        print('Location permission denied');
+      } else if (newLocationStatus.isPermanentlyDenied) {
+        openAppSettings();
+      }
+    } else {
+      print('Location permission already granted');
+    }
+
+    // Check notification permission
+    PermissionStatus notificationStatus = await Permission.notification.status;
+
+    if (!notificationStatus.isGranted) {
+      PermissionStatus newNotificationStatus = await Permission.notification.request();
+
+      if (newNotificationStatus.isGranted) {
+        print('Notification permission granted');
+      } else if (newNotificationStatus.isDenied) {
+        print('Notification permission denied');
+      } else if (newNotificationStatus.isPermanentlyDenied) {
+        openAppSettings();
+      }
+    } else {
+      print('Notification permission already granted');
+    }
+  }
+
+
   Future<void> init() async {
     final downloadDirectory = await getDownloadsDirectory();
     SharedPreferences pref = await SharedPreferences.getInstance();
@@ -298,6 +336,7 @@ class LocationService {
     final filepath = "${downloadDirectory!.path}/track${DateFormat('dd-MM-yyyy').format(date)}.gpx";
     file = File(filepath);
     isFirstRun = !file!.existsSync();
+    requestPermissions();
   }
 
   Future<void> listenLocation() async {
@@ -310,7 +349,7 @@ class LocationService {
       AndroidSettings settings = const AndroidSettings(
         accuracy: LocationAccuracy.NAVIGATION,
         interval: 1,
-        distanceFilter: 1,
+        distanceFilter: 0,
       );
 
       if (isFirstRun) {
@@ -330,35 +369,35 @@ class LocationService {
 
       await LocationManager().start();
       locationSubscription =
-      LocationManager().locationStream.listen((LocationDto position) async {
-        isConnected = await isInternetConnected();
-        if(isConnected){
-          await FirebaseFirestore.instance.collection('location').doc(userIdForLocation.toString()).set({
-            'latitude': position.latitude,
-            'longitude': position.longitude,
-            'name': userIdForLocation.toString(),
-            'isActive': true
-          }, SetOptions(merge: true));
-        }
-        print("w100 'Longitute $longi Latitute $lat'");
-        final trackPoint = Wpt(
-          lat: position.latitude,
-          lon: position.longitude,
-          time: DateTime.now(),
-        );
+          LocationManager().locationStream.listen((LocationDto position) async {
+            isConnected = await isInternetConnected();
+            if(isConnected){
+              await FirebaseFirestore.instance.collection('location').doc(userIdForLocation.toString()).set({
+                'latitude': position.latitude,
+                'longitude': position.longitude,
+                'name': userIdForLocation.toString(),
+                'isActive': true
+              }, SetOptions(merge: true));
+            }
+            print("w100 'Longitute $longi Latitute $lat'");
+            final trackPoint = Wpt(
+              lat: position.latitude,
+              lon: position.longitude,
+              time: DateTime.now(),
+            );
 
-        segment.trkpts.add(trackPoint);
-        if(isFirstRun){
-          track.trksegs.add(segment);
-          gpx.trks.add(track);
-          isFirstRun = false;
-        }
+            segment.trkpts.add(trackPoint);
+            if(isFirstRun){
+              track.trksegs.add(segment);
+              gpx.trks.add(track);
+              isFirstRun = false;
+            }
 
-        gpxString = GpxWriter().asString(gpx,pretty: true);
-        print("w100 $gpxString");
+            gpxString = GpxWriter().asString(gpx,pretty: true);
+            print("w100 $gpxString");
 
-        file?.writeAsStringSync(gpxString);
-      });
+            file?.writeAsStringSync(gpxString);
+          });
     }catch (e){
       print("w100 ERRORRRR:   $e");
     }
@@ -366,23 +405,23 @@ class LocationService {
 
 
   deleteDocument() async {
-      await FirebaseFirestore.instance
-          .collection('location')
-          .doc(userIdForLocation)
-          .delete()
-          .then(
-            (doc) => print("Document deleted"),
-        onError: (e) => print("Error updating document $e"),
-      );
+    await FirebaseFirestore.instance
+        .collection('location')
+        .doc(userIdForLocation)
+        .delete()
+        .then(
+          (doc) => print("Document deleted"),
+      onError: (e) => print("Error updating document $e"),
+    );
   }
 
   Future<void> stopListening() async {
-      try{
-        //WakelockPlus.disable();
-        LocationManager().stop();
-        locationSubscription.cancel();
-      }catch (e){
-        print("ERROR ${e.toString()}");
-      }
+    try{
+      //WakelockPlus.disable();
+      LocationManager().stop();
+      locationSubscription.cancel();
+    }catch (e){
+      print("ERROR ${e.toString()}");
+    }
   }
 }

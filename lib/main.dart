@@ -42,7 +42,6 @@ Future<void> main() async {
   await BackgroundLocator.initialize();
 
   Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
-  Workmanager().registerPeriodicTask("1", "simpleTask", frequency: Duration(minutes: 15));
 
   runApp(
     const MaterialApp(
@@ -126,6 +125,7 @@ void onStart(ServiceInstance service) async {
   service.on('stopService').listen((event) async {
     ls.stopListening();
     ls.deleteDocument();
+    Workmanager().cancelAll();
     service.stopSelf();
     //stopListeningLocation();
     FlutterLocalNotificationsPlugin().cancelAll();
@@ -134,6 +134,7 @@ void onStart(ServiceInstance service) async {
   if(isClockedIn == false){
     startTimer();
     ls.listenLocation();
+    Workmanager().registerPeriodicTask("1", "simpleTask", frequency: Duration(minutes: 15));
   }
 
   Timer.periodic(const Duration(seconds: 1), (timer) async {
