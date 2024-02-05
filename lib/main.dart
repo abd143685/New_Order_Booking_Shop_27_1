@@ -118,7 +118,7 @@ void onStart(ServiceInstance service) async {
 
     service.on('setAsBackground').listen((event) {
       service.setAsBackgroundService();
-      ls.listenLocation();
+      //ls.listenLocation();
     });
   }
 
@@ -134,7 +134,7 @@ void onStart(ServiceInstance service) async {
   if(isClockedIn == false){
     startTimer();
     ls.listenLocation();
-    Workmanager().registerPeriodicTask("1", "simpleTask", frequency: Duration(minutes: 15));
+    await Workmanager().registerPeriodicTask("1", "simpleTask", frequency: Duration(minutes: 15));
   }
 
   Timer.periodic(const Duration(seconds: 1), (timer) async {
@@ -150,6 +150,7 @@ void onStart(ServiceInstance service) async {
               'MY FOREGROUND SERVICE',
               icon: 'ic_bg_service_small',
               ongoing: true,
+              priority: Priority.high,
             ),
           ),
         );
