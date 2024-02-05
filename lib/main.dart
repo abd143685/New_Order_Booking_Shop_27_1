@@ -132,9 +132,13 @@ void onStart(ServiceInstance service) async {
   });
 
   if(isClockedIn == false){
-    startTimer();
-    ls.listenLocation();
-    await Workmanager().registerPeriodicTask("1", "simpleTask", frequency: Duration(minutes: 15));
+    try{
+      startTimer();
+      ls.listenLocation();
+      await Workmanager().registerPeriodicTask("1", "simpleTask", frequency: Duration(minutes: 15));
+    }catch (e){
+      print("X100 ${e.toString()}");
+    }
   }
 
   Timer.periodic(const Duration(seconds: 1), (timer) async {
