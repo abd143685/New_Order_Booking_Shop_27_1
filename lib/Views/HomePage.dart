@@ -226,6 +226,7 @@ class _HomePageState extends State<HomePage>with WidgetsBindingObserver {
           latOut: globalLatitude1,
           lngOut: globalLongitude1,
         ));
+        postFile();
         isClockedIn = false;
         _saveClockStatus(false);
         _stopTimer();
@@ -845,9 +846,10 @@ class _HomePageState extends State<HomePage>with WidgetsBindingObserver {
     );
   }
   Future<void> postFile() async {
+    SharedPreferences pref = await SharedPreferences.getInstance();
+    double totalDistance = pref.getDouble("TotalDistance") ?? 0.0;
     final date = DateFormat('dd-MM-yyyy').format(DateTime.now());
     final downloadDirectory = await getDownloadsDirectory();
-    //final directory = await getApplicationDocumentsDirectory();
     final filePath = File('${downloadDirectory?.path}/track$date.gpx');
 
     if (!filePath.existsSync()) {
@@ -855,17 +857,17 @@ class _HomePageState extends State<HomePage>with WidgetsBindingObserver {
       return;
     }
     var request = http.MultipartRequest("POST",
-        Uri.parse("https://apex.oracle.com/pls/apex/metaxperts/location/post/"));
+        Uri.parse("https://webhook.site/deb5543e-3d2b-4845-bee2-29f6874a45a6"));
     var gpxFile = await http.MultipartFile.fromPath(
         'body', filePath.path);
     request.files.add(gpxFile);
+
     // Add other fields if needed
     request.fields['userId'] = userId;
     request.fields['userName'] = userNames;
     request.fields['fileName'] = "${_getFormattedDate()}.gpx";
     request.fields['date'] = _getFormattedDate();
-    print(userNames);
-    // request.fields['currentTime']=
+    request.fields['totalDistance'] = totalDistance.toString(); // Add totalDistance as a field
 
     try {
       var response = await request.send();
@@ -873,8 +875,7 @@ class _HomePageState extends State<HomePage>with WidgetsBindingObserver {
         var responseData = await response.stream.toBytes();
         var result = String.fromCharCodes(responseData);
         print("Results: Post Successfully");
-        //deleteGPXFile(); // Delete the GPX file after successful upload
-        //deleteDocument();
+        pref.setDouble("TotalDistance", 0.0);
       } else {
         print("Failed to upload file. Status code: ${response.statusCode}");
       }
@@ -882,6 +883,7 @@ class _HomePageState extends State<HomePage>with WidgetsBindingObserver {
       print("Error: $e");
     }
   }
+
 
   void showLoadingIndicator(BuildContext context) {
     showDialog(

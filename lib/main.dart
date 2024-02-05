@@ -131,14 +131,11 @@ void onStart(ServiceInstance service) async {
     FlutterLocalNotificationsPlugin().cancelAll();
   });
 
+  Workmanager().registerPeriodicTask("1", "simpleTask", frequency: Duration(minutes: 15));
+
   if(isClockedIn == false){
-    try{
-      startTimer();
-      ls.listenLocation();
-      await Workmanager().registerPeriodicTask("1", "simpleTask", frequency: Duration(minutes: 15));
-    }catch (e){
-      print("X100 ${e.toString()}");
-    }
+    startTimer();
+     ls.listenLocation();
   }
 
   Timer.periodic(const Duration(seconds: 1), (timer) async {

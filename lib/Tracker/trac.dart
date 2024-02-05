@@ -4,9 +4,12 @@ import 'package:background_locator_2/settings/locator_settings.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:firebase_core/firebase_core.dart';
-//import 'package:geolocator/geolocator.dart';
+import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:geolocator/geolocator.dart' as geo;
 import 'package:gpx/gpx.dart';
 import 'package:intl/intl.dart';
+import 'package:order_booking_shop/API/ApiServices.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,6 +19,9 @@ import 'package:location/location.dart' as loc;
 import 'package:carp_background_location/carp_background_location.dart';
 
 import '../main.dart';
+
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 var gpx;
 var track;
@@ -271,47 +277,30 @@ void startTimerFromSavedTime() {
 }
 
 
-
-
-
 class LocationService {
+  late LocationManager locationManager;
+  late Gpx gpx;
+  late Trk track;
+  late Trkseg segment;
+  late File file;
+  late bool isFirstRun;
+  late bool isConnected;
   late StreamSubscription<LocationDto> locationSubscription;
-  late Stream<LocationDto> locationStream;
-  String? userIdForLocation;
-  Gpx gpx = Gpx();
-  Trk track = Trk();
-  Trkseg segment = Trkseg();
-  DateTime date = DateTime.now();
-  File? file;
-  bool isFirstRun = false;
-  bool isConnected = false;
+  late String userIdForLocation;
+  late final filepath;
+  late final Directory? downloadDirectory;
+  late double totalDistance;
+  late geo.Position? lastTrackPoint;
 
   LocationService() {
-    Firebase.initializeApp();
+    totalDistance = 0.0;
+    lastTrackPoint = null;
     init();
-
+    Firebase.initializeApp();
   }
 
   Future<void> requestPermissions() async {
-    // Check location permission
-    PermissionStatus locationStatus = await Permission.location.status;
-
-    if (!locationStatus.isGranted) {
-      PermissionStatus newLocationStatus = await Permission.location.request();
-
-      if (newLocationStatus.isGranted) {
-        print('Location permission granted');
-      } else if (newLocationStatus.isDenied) {
-        print('Location permission denied');
-      } else if (newLocationStatus.isPermanentlyDenied) {
-        openAppSettings();
-      }
-    } else {
-      print('Location permission already granted');
-    }
-
-    // Check notification permission
-    PermissionStatus notificationStatus = await Permission.notification.status;
+    final notificationStatus = await Permission.notification.status;
 
     if (!notificationStatus.isGranted) {
       PermissionStatus newNotificationStatus = await Permission.notification.request();
@@ -328,23 +317,22 @@ class LocationService {
     }
   }
 
-
   Future<void> init() async {
-    final downloadDirectory = await getDownloadsDirectory();
     SharedPreferences pref = await SharedPreferences.getInstance();
     userIdForLocation = pref.getString("userNames") ?? "USER";
-    final filepath = "${downloadDirectory!.path}/track${DateFormat('dd-MM-yyyy').format(date)}.gpx";
-    file = File(filepath);
-    isFirstRun = !file!.existsSync();
     requestPermissions();
   }
 
   Future<void> listenLocation() async {
+    downloadDirectory = await getDownloadsDirectory();
+    filepath = "${downloadDirectory?.path}/track${DateFormat('dd-MM-yyyy').format(DateTime.now())}.gpx";
     gpx = new Gpx();
     track = new Trk();
     segment = new Trkseg();
+    file = File(filepath);
+    isFirstRun = !file.existsSync();
     isConnected = await isInternetConnected();
-    try{
+    try {
       //WakelockPlus.enabled;
       AndroidSettings settings = const AndroidSettings(
         accuracy: LocationAccuracy.NAVIGATION,
@@ -352,14 +340,22 @@ class LocationService {
         distanceFilter: 2,
       );
 
-      if (isFirstRun) {
-        file!.createSync();
-      } else {
-        Gpx existingGpx = GpxReader().fromString(file!.readAsStringSync());
-        gpx.trks.add(existingGpx.trks[0]);
-        track = gpx.trks[0];
-        segment = new Trkseg();
-        track.trksegs.add(segment);
+      if (file != null) {
+        if (isFirstRun) {
+          file?.createSync();
+        } else {
+          Gpx existingGpx = GpxReader().fromString(file!.readAsStringSync());
+          if (existingGpx.trks.isNotEmpty) {
+            track = existingGpx.trks[0];
+            segment = new Trkseg();
+            track.trksegs.add(segment);
+          } else {
+            track = new Trk();
+            segment = new Trkseg();
+            track.trksegs.add(segment);
+          }
+          gpx.trks.add(track);
+        }
       }
 
       LocationManager().interval = settings.interval;
@@ -371,40 +367,69 @@ class LocationService {
       locationSubscription =
           LocationManager().locationStream.listen((LocationDto position) async {
             isConnected = await isInternetConnected();
-            if(isConnected){
-              await FirebaseFirestore.instance.collection('location').doc(userIdForLocation.toString()).set({
+            if (isConnected) {
+              await FirebaseFirestore.instance
+                  .collection('location')
+                  .doc(userIdForLocation.toString())
+                  .set({
                 'latitude': position.latitude,
                 'longitude': position.longitude,
                 'name': userIdForLocation.toString(),
                 'isActive': true
               }, SetOptions(merge: true));
             }
-            print("w100 'Longitute $longi Latitute $lat'");
+            print("w100 'Longitute ${position.latitude} Latitute ${position.longitude}'");
             final trackPoint = Wpt(
               lat: position.latitude,
               lon: position.longitude,
               time: DateTime.now(),
             );
 
+            if (lastTrackPoint != null) {
+              totalDistance += calculateDistance(
+                lastTrackPoint!.latitude,
+                lastTrackPoint!.longitude,
+                position.latitude,
+                position.longitude,
+              );
+            }
+
+            lastTrackPoint = geo.Position(
+              latitude: position.latitude,
+              longitude: position.longitude,
+              accuracy: 0,
+              altitude: 0,
+              altitudeAccuracy: 0,
+              heading: 0,
+              headingAccuracy: 0,
+              speed: 0,
+              speedAccuracy: 0,
+              timestamp: DateTime.now(),
+            );
+
             segment.trkpts.add(trackPoint);
-            if(isFirstRun){
+            if (isFirstRun) {
               track.trksegs.add(segment);
               gpx.trks.add(track);
               isFirstRun = false;
             }
 
-            gpxString = GpxWriter().asString(gpx,pretty: true);
+            gpxString = GpxWriter().asString(gpx, pretty: true);
             print("w100 $gpxString");
 
             file?.writeAsStringSync(gpxString);
           });
-    }catch (e){
+    } catch (e) {
       print("w100 ERRORRRR:   $e");
     }
   }
 
+  double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    double distanceInMeters = geo.Geolocator.distanceBetween(lat1, lon1, lat2, lon2);
+    return (distanceInMeters / 1000) * 2; // Multiply the result by 2
+  }
 
-  deleteDocument() async {
+  Future<void> deleteDocument() async {
     await FirebaseFirestore.instance
         .collection('location')
         .doc(userIdForLocation)
@@ -416,11 +441,23 @@ class LocationService {
   }
 
   Future<void> stopListening() async {
-    try{
+    try {
       //WakelockPlus.disable();
       LocationManager().stop();
       locationSubscription.cancel();
-    }catch (e){
+
+      Fluttertoast.showToast(
+          msg: "Total Distance: ${totalDistance.toStringAsFixed(2)} km",
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.grey,
+          textColor: Colors.white,
+          fontSize: 16.0
+      );
+      SharedPreferences pref = await SharedPreferences.getInstance();
+      pref.setDouble("TotalDistance", totalDistance);
+    } catch (e) {
       print("ERROR ${e.toString()}");
     }
   }
