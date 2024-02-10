@@ -124,7 +124,7 @@ void onStart(ServiceInstance service) async {
 
   service.on('stopService').listen((event) async {
     ls.stopListening();
-    ls.deleteDocument();
+    //ls.deleteDocument();
     Workmanager().cancelAll();
     service.stopSelf();
     //stopListeningLocation();
@@ -156,19 +156,19 @@ void onStart(ServiceInstance service) async {
           ),
         );
 
-        // flutterLocalNotificationsPlugin.show(
-        //   889,
-        //   'Location',
-        //   'Longitude ${longi} , Latitute $lat',
-        //   const NotificationDetails(
-        //     android: AndroidNotificationDetails(
-        //       'my_foreground',
-        //       'MY FOREGROUND SERVICE',
-        //       icon: 'ic_bg_service_small',
-        //       ongoing: true,
-        //     ),
-        //   ),
-        // );
+        flutterLocalNotificationsPlugin.show(
+          889,
+          'Location',
+          'Longitude ${longi} , Latitute $lat',
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'my_foreground',
+              'MY FOREGROUND SERVICE',
+              icon: 'ic_bg_service_small',
+              ongoing: true,
+            ),
+          ),
+        );
 
         service.setForegroundNotificationInfo(
           title: "My App Service",

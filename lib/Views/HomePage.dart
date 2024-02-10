@@ -166,6 +166,8 @@ class _HomePageState extends State<HomePage>with WidgetsBindingObserver {
     );
     bool isLocationEnabled = await _isLocationEnabled();
 
+    requestPermissions(context);
+
     if (!isLocationEnabled) {
       Fluttertoast.showToast(
         msg: "Please enable GPS or location services before clocking in.",
@@ -883,6 +885,64 @@ class _HomePageState extends State<HomePage>with WidgetsBindingObserver {
       print("Error: $e");
     }
   }
+
+  Future<bool> requestPermissions(BuildContext context) async {
+    final notificationStatus = await Permission.notification.status;
+    final locationStatus = await Permission.location.status;
+
+    if (!notificationStatus.isGranted) {
+      PermissionStatus newNotificationStatus = await Permission.notification.request();
+
+      if (newNotificationStatus.isDenied || newNotificationStatus.isPermanentlyDenied) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Permission Denied'),
+              content: Text('Notification permission is required for this app to function properly. Please grant it in the app settings.'),
+              actions: <Widget>[
+                TextButton(
+                  child: Text('Open Settings'),
+                  onPressed: () {
+                    openAppSettings();
+                  },
+                ),
+              ],
+            );
+          },
+        );
+        return false;
+      }
+    }
+
+    if (!locationStatus.isGranted) {
+      PermissionStatus newLocationStatus = await Permission.location.request();
+
+      if (newLocationStatus.isDenied || newLocationStatus.isPermanentlyDenied) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Permission Denied'),
+              content: Text('Location permission is required for this app to function properly. Please grant it in the app settings.'),
+              actions: <Widget>[
+                TextButton(
+                  child: Text('Open Settings'),
+                  onPressed: () {
+                    openAppSettings();
+                  },
+                ),
+              ],
+            );
+          },
+        );
+        return false;
+      }
+    }
+
+    return true;
+  }
+
 
 
   void showLoadingIndicator(BuildContext context) {
