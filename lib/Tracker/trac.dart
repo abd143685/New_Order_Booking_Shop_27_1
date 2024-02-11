@@ -333,10 +333,10 @@ class LocationService {
 
       late LocationSettings locationSettings;
       locationSettings = AndroidSettings(
-        accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 100,
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 10,
         forceLocationManager: true,
-        intervalDuration: const Duration(seconds: 3),
+        intervalDuration: const Duration(seconds: 1),
       );
 
 
