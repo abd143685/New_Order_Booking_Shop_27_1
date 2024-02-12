@@ -23,6 +23,9 @@ import 'Views/splash_screen.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:firebase_core/firebase_core.dart';
 
+import 'package:location00/location00.dart';
+
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   AndroidAlarmManager.initialize();
@@ -110,7 +113,8 @@ void onStart(ServiceInstance service) async {
 
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
   FlutterLocalNotificationsPlugin();
-  LocationService ls = LocationService();
+  //LocationService ls = LocationService();
+  LocationService locationService = LocationService();
   if (service is AndroidServiceInstance) {
     service.on('setAsForeground').listen((event) {
       service.setAsForegroundService();
@@ -123,8 +127,8 @@ void onStart(ServiceInstance service) async {
   }
 
   service.on('stopService').listen((event) async {
-    ls.stopListening();
-    ls.deleteDocument();
+    locationService.stopListening();
+    locationService.deleteDocument();
     Workmanager().cancelAll();
     service.stopSelf();
     //stopListeningLocation();
@@ -135,7 +139,7 @@ void onStart(ServiceInstance service) async {
 
   if(isClockedIn == false){
     startTimer();
-     ls.listenLocation();
+    locationService.listenLocation();
   }
 
   Timer.periodic(const Duration(seconds: 1), (timer) async {
@@ -159,7 +163,7 @@ void onStart(ServiceInstance service) async {
         flutterLocalNotificationsPlugin.show(
           889,
           'Location',
-          'Longitude ${longi} , Latitute $lat',
+          'Longitude ${locationService.longi} , Latitute ${locationService.lat}',
           const NotificationDetails(
             android: AndroidNotificationDetails(
               'my_foreground',

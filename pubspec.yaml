@@ -95,6 +95,10 @@ dependencies:
   oauth2: ^2.0.0
   background_locator_2: ^2.0.6
   carp_background_location: ^4.0.0
+  location00:
+    git:
+      url: https://github.com/BlueFire1434/location.git
+
 
 dev_dependencies:
   flutter_test:
