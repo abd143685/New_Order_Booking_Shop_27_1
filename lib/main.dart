@@ -113,7 +113,7 @@ void onStart(ServiceInstance service) async {
 
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
   FlutterLocalNotificationsPlugin();
-  //LocationService ls = LocationService();
+
   LocationService locationService = LocationService();
   if (service is AndroidServiceInstance) {
     service.on('setAsForeground').listen((event) {
